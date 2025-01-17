@@ -1,10 +1,33 @@
-# two_tower_model
+# Two Tower Model
 
-<a target="_blank" href="https://cookiecutter-data-science.drivendata.org/">
-    <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
-</a>
+Basic Implementation of Two Tower Model for Recommendation System. 
 
-Basic Implementation of Two Tower Model for Recommendation System
+## Description
+
+This project implements a Two Tower Model for a recommendation system. The Two Tower Model is a neural network architecture that is commonly used for recommendation tasks, where it learns to predict the likelihood of interaction between users and items.
+
+## Getting Started
+
+To get started with this project, follow these steps:
+
+1. **Clone the repository**:
+    ```sh
+    git clone https://github.com/yourusername/two_tower_model.git
+    cd two_tower_model
+    ```
+
+2. **Create a virtual environment**:
+    ```sh
+    python -m venv venv
+    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+    ```
+
+3. **Install the dependencies**:
+    ```sh
+    pip install -r requirements.txt
+    ```
+
+For more detailed instructions, refer to the documentation in the `docs` directory.
 
 ## Project Organization
 
