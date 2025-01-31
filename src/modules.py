@@ -102,54 +102,66 @@ class EmbedFeaturesFT(torch.nn.Module):
         """
         super().__init__()
         # Add Special Tokens if needed
-        categories_offset = F.pad(torch.tensor(list(nr_categories)), (1, 0), value=num_special_tokens)
+        self.dim_embedding = dim_embedding
         
-        # Get starting offsets for embeddings
-        # Essentially, we will offset every numerical category to ensure that every feature has unique "values"
-        categories_offset = categories_offset.cumsum(dim=-1)[:-1] 
+        if not (nr_cat_features == 0):
+            categories_offset = F.pad(torch.tensor(list(nr_categories)), (1, 0), value=num_special_tokens)
+            
+            # Get starting offsets for embeddings
+            # Essentially, we will offset every numerical category to ensure that every feature has unique "values"
+            categories_offset = categories_offset.cumsum(dim=-1)[:-1] 
 
-        total_cat_embeddings = sum(nr_categories) + categories_offset.max()
+            total_cat_embeddings = sum(nr_categories) + categories_offset.max()
 
-        # Categorical Embeddings
-        self.cat_embed = torch.nn.Embedding(total_cat_embeddings, dim_embedding)
-        # MLP Embedding for cont
-        self.cont_embed = torch.nn.ModuleList(
-            [
-                torch.nn.FFN(
-                    dim_in=1,
-                    dim_hidden=internal_dimension,
-                    dim_out=dim_embedding,
-                    mult=0,
-                    activation=cont_embd_act,
-                    dropout_p=cont_emb_dropout_p,
-                )
-                for _ in range(0, self.nr_cont)
-            ]
-        )
+            # Categorical Embeddings
+            self.cat_embed = torch.nn.Embedding(total_cat_embeddings, dim_embedding)
+        else:
+            self.cat_embed = None
         
-        # MLP Embedding for vec
-        self.vec_embed = FFN(
-            dim_in=dim_vec_features,
-            dim_hidden=internal_dimension,
-            dim_out=dim_embedding,
-            mult=0,
-            activation=cont_embd_act,
-            dropout_p=cont_emb_dropout_p,
-        )
+        if not (nr_cont_features == 0):
+            # MLP Embedding for cont
+            self.cont_embed = torch.nn.ModuleList(
+                [
+                    FFN(
+                        dim_in=1,
+                        dim_hidden=internal_dimension,
+                        dim_out=dim_embedding,
+                        mult=0,
+                        activation=cont_embd_act,
+                        dropout_p=cont_emb_dropout_p,
+                    )
+                    for _ in range(0, nr_cont_features)
+                ]
+            )
+        else:
+            self.cont_embed = None
+        
+        if not (nr_vec_features == 0):
+            # MLP Embedding for vec
+            self.vec_embed = FFN(
+                dim_in=dim_vec_features,
+                dim_hidden=internal_dimension,
+                dim_out=dim_embedding,
+                mult=0,
+                activation=cont_embd_act,
+                dropout_p=cont_emb_dropout_p,
+            )
+        else:
+            self.vec_embed = None
 
-  
+
     def _embed_vec(self, x_vec: torch.Tensor) -> torch.Tensor:
         if x_vec is None:
             return None
         return self.vec_embed(x_vec)
 
     def _embed_categorical(self, x_cat: torch.Tensor) -> torch.Tensor:
-        if x_cat.shape[1] == 0:
+        if x_cat is None:
             return None
         return self.cat_embed(x_cat + self.categories_offset)
 
     def _embed_cont(self, x_cont: torch.Tensor) -> torch.Tensor:
-        if x_cont.shape[1] == 0:
+        if x_cont is None:
             return None
         x_cont_embed = torch.empty(
             size=(x_cont.shape[0], x_cont.shape[1], int(self.dim_embedding)),

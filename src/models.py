@@ -8,25 +8,26 @@ import numpy as np
 from torch.optim import Adam
 from einops import rearrange
 from .modules import MultiHeadAttention, EmbedFeaturesFT
+from typing import List
 
 
-class UserTower(nn.Module):
-    def __init__(self, input_dim, embed_dim, output_dim, nr_heads):
-        super(UserTower, self).__init__()
-        self.embed_dim = embed_dim
-        # Input Embedding Layer (projects 4D input to embed_dim)
-        self.embedding = nn.Linear(input_dim, embed_dim)
-        # Multi-Head Attention Layer
-        self.attention = MultiHeadAttention(dim_input=embed_dim, nr_heads=nr_heads)
-        # Fully Connected Layer (maps back to scalar output)
-        self.fc = nn.Linear(embed_dim, output_dim)
+# class UserTower(nn.Module):
+#     def __init__(self, input_dim, embed_dim, output_dim, nr_heads):
+#         super(UserTower, self).__init__()
+#         self.embed_dim = embed_dim
+#         # Input Embedding Layer (projects 4D input to embed_dim)
+#         self.embedding = nn.Linear(input_dim, embed_dim)
+#         # Multi-Head Attention Layer
+#         self.attention = MultiHeadAttention(dim_input=embed_dim, nr_heads=nr_heads)
+#         # Fully Connected Layer (maps back to scalar output)
+#         self.fc = nn.Linear(embed_dim, output_dim)
 
-    def forward(self, x, attn_mask=None):
-        x = self.embedding(x)  # Project to higher dimension
-        x = x.unsqueeze(1)  # Add sequence dimension: (batch, seq_len=1, embed_dim)
-        attn_output = self.attention(x, x)   
-        x = attn_output.mean(dim=1)  # Average over sequence dimension
-        return self.fc(x) 
+#     def forward(self, x, attn_mask=None):
+#         x = self.embedding(x)  # Project to higher dimension
+#         x = x.unsqueeze(1)  # Add sequence dimension: (batch, seq_len=1, embed_dim)
+#         attn_output = self.attention(x, x)   
+#         x = attn_output.mean(dim=1)  # Average over sequence dimension
+#         return self.fc(x) 
 
 class ProductTower(nn.Module):
     def __init__(self, input_dim, embed_dim, output_dim, nr_heads):
@@ -47,36 +48,58 @@ class ProductTower(nn.Module):
         return self.fc(x) 
 
 
-# class UserTower(nn.Module):
-#     def __init__(self, categorical_features, continuous_features, dim_embedding, internal_dimension=100):
-#         super(UserTower, self).__init__()
+class UserTower(nn.Module):
+    def __init__(self, 
+                 input_dim: int, 
+                 embed_dim: int, 
+                 output_dim: int, 
+                 nr_heads: int, 
+                 categorical_feature_indices: List[int], 
+                 continuous_feature_indices: List[int], 
+                 internal_dimension: int):
+        super(UserTower, self).__init__()
 
-#         self.embedding_layer = EmbedFeaturesFT(
-#             nr_categories=[len(cats) for cats in categorical_features],  
-#             dim_embedding=dim_embedding,
-#             nr_cont_features=len(continuous_features),
-#             nr_cat_features=len(categorical_features),
-#             internal_dimension=internal_dimension,
-#         )
+        self.categorical_feature_indices = categorical_feature_indices
+        self.continuous_feature_indices = continuous_feature_indices
 
-#         self.attention = nn.MultiheadAttention(embed_dim=dim_embedding, num_heads=4, batch_first=True)
-#         self.fc = nn.Linear(dim_embedding, 1)  # Example final layer
+        self.embedding_layer = EmbedFeaturesFT(
+            nr_categories=[50] * len(categorical_feature_indices),  # Assuming max 50 categories per feature
+            dim_embedding=embed_dim,
+            nr_cont_features=len(continuous_feature_indices),
+            nr_cat_features=len(categorical_feature_indices),
+            internal_dimension=internal_dimension,
+        )
 
-#     def forward(self, x_cat, x_cont, x_vec=None):
-#         # Embed categorical & continuous features
-#         x_cat_emb, x_cont_emb, _ = self.embedding_layer(x_cat, x_cont, x_vec)
+        self.attention = nn.MultiheadAttention(embed_dim=embed_dim, num_heads=nr_heads, batch_first=True)
+        self.fc = nn.Linear(embed_dim, output_dim)  
 
-#         # Concatenate embeddings along feature axis
-#         x = torch.cat([x_cat_emb, x_cont_emb], dim=1) if x_cat_emb is not None and x_cont_emb is not None else \
-#             x_cat_emb if x_cont_emb is None else x_cont_emb
+    def forward(self, x):
+        """
+        x: (batch_size, n_features) tensor where n_features = m categorical + l continuous features
+        """
 
-#         # Attention layer
-#         x = self.attention(x, x, x)[0]
+        # Split categorical and continuous features
+        x_cat = x[:, self.categorical_feature_indices].long() if self.categorical_feature_indices else None
+        x_cont = x[:, self.continuous_feature_indices].float() if self.continuous_feature_indices else None
 
-#         # Fully connected layer
-#         x = self.fc(x.mean(dim=1))  
+        # Embed categorical & continuous features
+        x_cat_emb, x_cont_emb, _ = self.embedding_layer(x_cat, x_cont, None)
 
-#         return x
+        # Concatenate embeddings along feature axis
+        if x_cat_emb is not None and x_cont_emb is not None:
+            x = torch.cat([x_cat_emb, x_cont_emb], dim=1)
+        elif x_cat_emb is not None:
+            x = x_cat_emb
+        else:
+            x = x_cont_emb
+
+        # Attention layer
+        x = self.attention(x, x, x)[0]
+
+        # Fully connected layer
+        x = self.fc(x.mean(dim=1))
+
+        return x
 
 
 # class UserTower(nn.Module):

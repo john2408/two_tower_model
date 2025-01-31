@@ -83,7 +83,11 @@ if __name__ == "__main__":
     user_config = {'input_dim': user_data_tensor.shape[1], 
                 'embed_dim': 128,
                 'output_dim': 64, 
-                'nr_heads': 8}
+                'nr_heads': 8, 
+                'continuous_feature_indices':[i for i in range(user_data_tensor.shape[1])],
+                'categorical_feature_indices': [], 
+                'internal_dimension':32 # Internal Dimension for Continuous Features Embedding
+                }
     product_config = {'input_dim': product_data_tensor.shape[1], 
                     'embed_dim': 128, 
                     'output_dim': 64,
@@ -106,11 +110,12 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
     # Initialize model
-    model_type = "mlp" # "multihead" or "mlp"
+    model_type = "multihead" # "multihead" or "mlp"
     if model_type == "multihead":
         model = TwoTowerRecommendationModel(user_config, product_config, learning_rate)
     elif model_type == "mlp":
         model = TwoTowerRecommendationModel_MLP(user_config_mlp, product_config_mlp, learning_rate)
+
 
     if not use_gpu:
 
@@ -127,7 +132,10 @@ if __name__ == "__main__":
         trainer = pl.Trainer(max_epochs=epochs, accelerator="gpu", devices=1)
         trainer.fit(model, train_loader, test_loader)
 
-
+    # Print the model loss
+    print(f"Training Loss: {trainer.callback_metrics['train_loss']}")
+    print(f"Validation Loss: {trainer.callback_metrics['val_loss']}")
+    
     # ---------------------
     # Predictions
     # ---------------------
