@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 
 from collections import defaultdict
 from torch.utils.data import DataLoader, TensorDataset, random_split
-from src.models import TwoTowerRecommendationModel
+from src.models import TwoTowerRecommendationModel, TwoTowerRecommendationModel_MLP
 from src.utils import generate_random_sample_data
 from src.movie_dataset_utils import load_data, gen_user_vecs
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
@@ -88,6 +88,13 @@ if __name__ == "__main__":
                     'embed_dim': 128, 
                     'output_dim': 64,
                     'nr_heads': 8}
+    
+    user_config_mlp = {'input_dim': user_data_tensor.shape[1], 
+                'embed_dim': 128,
+                'output_dim': 64}
+    product_config_mlp = {'input_dim': product_data_tensor.shape[1], 
+                    'embed_dim': 128, 
+                    'output_dim': 64}
 
     # Create DataLoader
     dataset = TensorDataset(user_data_tensor, product_data_tensor, target_data_tensor)
@@ -99,7 +106,11 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
     # Initialize model
-    model = TwoTowerRecommendationModel(user_config, product_config, learning_rate)
+    model_type = "mlp" # "multihead" or "mlp"
+    if model_type == "multihead":
+        model = TwoTowerRecommendationModel(user_config, product_config, learning_rate)
+    elif model_type == "mlp":
+        model = TwoTowerRecommendationModel_MLP(user_config_mlp, product_config_mlp, learning_rate)
 
     if not use_gpu:
 
