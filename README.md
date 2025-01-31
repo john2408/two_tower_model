@@ -36,9 +36,9 @@ For more detailed instructions, refer to the documentation in the `docs` directo
 ├── Makefile           <- Makefile with convenience commands like `make data` or `make train`
 ├── README.md          <- The top-level README for developers using this project.
 ├── data
-│   ├── external       <- Data from third party sources.
-│   ├── interim        <- Intermediate data that has been transformed.
-│   ├── processed      <- The final, canonical data sets for modeling.
+│   ├── gold           <- Data ready for train/testing
+│   ├── silver         <- preprocessed data
+│   ├── interim        <- External temporal data
 │   └── raw            <- The original, immutable data dump.
 │
 ├── docs               <- A default mkdocs project; see www.mkdocs.org for details
@@ -62,22 +62,14 @@ For more detailed instructions, refer to the documentation in the `docs` directo
 │
 ├── setup.cfg          <- Configuration file for flake8
 │
-└── two_tower_model   <- Source code for use in this project.
+└── src   <- Source code for use in this project.
     │
     ├── __init__.py             <- Makes two_tower_model a Python module
     │
-    ├── config.py               <- Store useful variables and configuration
+    ├── models.py               <- Two Tower Models and Variants for User and Items Tower
     │
-    ├── dataset.py              <- Scripts to download or generate data
-    │
-    ├── features.py             <- Code to create features for modeling
-    │
-    ├── modeling                
-    │   ├── __init__.py 
-    │   ├── predict.py          <- Code to run model inference with trained models          
-    │   └── train.py            <- Code to train models
-    │
-    └── plots.py                <- Code to create visualizations
+    ├── modules.py              <- Pytorch modules
+
 ```
 
 --------
